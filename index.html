@@ -114,6 +114,41 @@
             border-radius: 4px; font-size: 10px; font-weight: bold;
             margin-left: 8px;
         }
+        .ids-hub-badge {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background: #063b35;
+            color: #5eead4;
+            border: 1px solid #0f766e;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .hub-return-btn {
+            display: none;
+            padding: 6px 12px;
+            background: #0f172a;
+            color: #93c5fd;
+            border: 1px solid #1d4ed8;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .hub-return-btn:hover { background: #1e3a8a; color: #dbeafe; }
+        .hub-link-note {
+            display: none;
+            margin: -4px 0 14px;
+            padding: 9px 11px;
+            border: 1px solid #0f766e;
+            border-radius: 8px;
+            background: #062f2b;
+            color: #99f6e4;
+            font-size: 12px;
+            line-height: 1.6;
+        }
  
         /* タブナビ */
         .tab-nav {
@@ -861,6 +896,7 @@
             <img src="logo.png" alt="株式帝国" style="height: 120px; width: auto; display: inline-block;">
         </div>
         <div class="subtitle">株式帝国へようこそ</div>
+        <div class="hub-link-note" id="hub-link-note"></div>
         
         <div class="form-group" id="username-group" style="display:none;">
             <label>ユーザー名</label>
@@ -895,6 +931,8 @@
         </div>
         <div class="header-right">
             <div id="admin-badge" class="admin-badge" style="display:none;">ADMIN</div>
+            <div class="ids-hub-badge" id="ids-hub-badge">IDS Hub連携済み</div>
+            <a class="hub-return-btn" id="hub-return-btn" href="#" rel="noopener">Hubへ戻る</a>
             <div class="user-name-display" id="user-name-display"></div>
             <div class="user-email" id="user-email"></div>
             <button class="admin-page-btn" onclick="openAdminPage()">管理者ページ</button>
@@ -1357,11 +1395,91 @@ let currentUsername = '';
 let allCompanies   = [];
 let activeMultipliers = {}; // イベントによる倍率 { stockId: multiplier }
 let selectedStockId = null;
+let idsHubLinkContext = null;
 
 /* ─── チュートリアル状態 ─── */
 let tutorialActive = false;
 let tutorialCurrentStep = 0;
 let tutorialCompleted = false;
+
+function normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
+function readIdsHubLinkContext() {
+    const params = new URLSearchParams(window.location.search);
+    const hub = params.get('hub');
+    const email = normalizeEmail(params.get('hubEmail'));
+    if (hub !== 'ids' || !email) return null;
+
+    return {
+        source: 'ids',
+        email,
+        displayName: (params.get('hubName') || '').trim(),
+        returnUrl: params.get('hubReturnUrl') || 'https://kali-n-coder.github.io/IDS-hub/'
+    };
+}
+
+function getIdsHubPayload() {
+    if (!idsHubLinkContext || !currentUser) return null;
+    if (normalizeEmail(currentUser.email) !== idsHubLinkContext.email) return null;
+
+    return {
+        linked: true,
+        email: currentUser.email,
+        hubEmail: idsHubLinkContext.email,
+        displayName: idsHubLinkContext.displayName || currentUsername || '',
+        linkedAt: Date.now(),
+        returnUrl: idsHubLinkContext.returnUrl
+    };
+}
+
+function applyIdsHubPrefill() {
+    idsHubLinkContext = readIdsHubLinkContext();
+    if (!idsHubLinkContext) return;
+
+    const emailInput = document.getElementById('auth-email');
+    const usernameInput = document.getElementById('auth-username');
+    const note = document.getElementById('hub-link-note');
+
+    emailInput.value = idsHubLinkContext.email;
+    if (usernameInput && idsHubLinkContext.displayName) {
+        usernameInput.value = idsHubLinkContext.displayName;
+    }
+    if (note) {
+        note.textContent = 'IDS Hubアカウントと同じメールアドレスでログインまたは新規登録すると、投資ゲームと連携されます。';
+        note.style.display = 'block';
+    }
+}
+
+function updateIdsHubLinkUi() {
+    const linked = getIdsHubPayload();
+    const badge = document.getElementById('ids-hub-badge');
+    const returnBtn = document.getElementById('hub-return-btn');
+
+    if (badge) {
+        badge.style.display = linked ? 'inline-flex' : 'none';
+    }
+    if (returnBtn) {
+        returnBtn.style.display = idsHubLinkContext?.returnUrl ? 'inline-flex' : 'none';
+        if (idsHubLinkContext?.returnUrl) {
+            returnBtn.href = idsHubLinkContext.returnUrl;
+        }
+    }
+}
+
+async function persistIdsHubLink() {
+    const payload = getIdsHubPayload();
+    if (!payload) {
+        updateIdsHubLinkUi();
+        return;
+    }
+
+    await update(dbRef(db, `stock_users/${currentUser.uid}`), {
+        idsHub: payload
+    });
+    updateIdsHubLinkUi();
+}
 
 const TUTORIAL_STEPS = [
     {
@@ -1444,13 +1562,24 @@ window.handleAuth = async function() {
         } else {
             const cred = await createUserWithEmailAndPassword(auth, email, pass);
             // 新規登録時: ユーザー名をFirebaseに保存
-            await set(dbRef(db, `stock_users/${cred.user.uid}`), {
+            const initialData = {
                 username: username,
                 email: email,
                 balance: 2000000,
                 holdings: {},
                 lastBonusDate: null,
-            });
+            };
+            if (idsHubLinkContext && normalizeEmail(email) === idsHubLinkContext.email) {
+                initialData.idsHub = {
+                    linked: true,
+                    email,
+                    hubEmail: idsHubLinkContext.email,
+                    displayName: idsHubLinkContext.displayName || username,
+                    linkedAt: Date.now(),
+                    returnUrl: idsHubLinkContext.returnUrl
+                };
+            }
+            await set(dbRef(db, `stock_users/${cred.user.uid}`), initialData);
         }
     } catch (e) {
         const msgs = {
@@ -1533,9 +1662,11 @@ onAuthStateChanged(auth, async (user) => {
         
         try {
             await loadUserData();
+            await persistIdsHubLink();
         } catch (e) {
             console.warn('Firebase load failed, using localStorage fallback:', e.message);
             loadFromLocalStorage();
+            updateIdsHubLinkUi();
         }
         checkLoginBonus();
         initMarket();
@@ -1547,6 +1678,8 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('login-screen').style.display = '';
         document.getElementById('main-screen').style.display = 'none';
         document.getElementById('admin-badge').style.display = 'none';
+        document.getElementById('ids-hub-badge').style.display = 'none';
+        document.getElementById('hub-return-btn').style.display = 'none';
         document.getElementById('user-name-display').textContent = '';
         if (priceInterval) { clearInterval(priceInterval); priceInterval = null; }
         if (eventInterval) { clearTimeout(eventInterval); eventInterval = null; }
@@ -1606,12 +1739,18 @@ async function loadUserData() {
 async function saveUserData() {
     if (!currentUser) return;
     const uid = currentUser.uid;
+    const idsHub = getIdsHubPayload();
+    const updates = {
+        balance, holdings,
+        lastBonusDate,
+        username: currentUsername
+    };
+    if (idsHub) {
+        updates.idsHub = idsHub;
+    }
+
     try {
-        await update(dbRef(db, `stock_users/${uid}`), {
-            balance, holdings,
-            lastBonusDate,
-            username: currentUsername
-        });
+        await update(dbRef(db, `stock_users/${uid}`), updates);
         saveToLocalStorage();
     } catch (e) {
         console.warn('Firebase save failed:', e.message);
@@ -2755,6 +2894,7 @@ function showToast(msg, type) {
 setInterval(updateMarketTime, 1000);
 priceInterval = setInterval(tickPrices, 2000);
 setInterval(checkForWarnings, 5000);
+applyIdsHubPrefill();
 
 /* ─── チュートリアル関数 ─── */
 function startTutorial() {
