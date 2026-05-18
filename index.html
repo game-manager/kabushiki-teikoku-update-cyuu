@@ -149,6 +149,31 @@
         }
         .admin-btn-market:hover { background: #8b5cf6; }
 
+        /* 検索バー */
+        .market-search-bar {
+            position: relative; margin-bottom: 16px;
+        }
+        .market-search-input {
+            width: 100%; padding: 12px 16px;
+            background: #0f172a; color: #e0e8f0;
+            border: 1px solid #1e293b; border-radius: 8px;
+            font-size: 14px; transition: all 0.2s;
+        }
+        .market-search-input:focus {
+            outline: none; border-color: #3b82f6;
+            box-shadow: 0 0 0 3px #3b82f633;
+        }
+        .market-search-input::placeholder {
+            color: #6b7280;
+        }
+        .search-clear {
+            position: absolute; right: 14px; top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280; font-size: 20px;
+            cursor: pointer; transition: color 0.2s;
+        }
+        .search-clear:hover { color: #e0e8f0; }
+
         .stock-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -813,6 +838,10 @@
                     <div class="market-time" id="market-time"></div>
                 </div>
             </div>
+            <div class="market-search-bar">
+                <input type="text" id="market-search" placeholder="企業名、ティッカー、セクターで検索..." class="market-search-input" onkeyup="filterMarketBySearch()">
+                <span class="search-clear" id="search-clear" onclick="clearMarketSearch()" style="display:none;">×</span>
+            </div>
             <div class="market-sub-tabs" id="market-sub-tabs">
                 <button class="market-sub-tab active" data-filter="real" onclick="filterMarket('real')">
                     実際の株式 <span class="tab-count" id="count-real"></span>
@@ -1117,18 +1146,41 @@ const db   = getDatabase(app);
  
 /* ─── 有名企業データ ─── */
 const FAMOUS_STOCKS = [
+    // 米国テクノロジー（5社）
     { id: 'AAPL',  name: 'Apple',           ticker: 'AAPL',  basePrice: 26800,  sector: 'テクノロジー' },
     { id: 'GOOGL', name: 'Alphabet(Google)', ticker: 'GOOGL', basePrice: 22500,  sector: 'テクノロジー' },
-    { id: 'AMZN',  name: 'Amazon',           ticker: 'AMZN',  basePrice: 27200,  sector: 'EC・クラウド' },
     { id: 'MSFT',  name: 'Microsoft',        ticker: 'MSFT',  basePrice: 58600,  sector: 'テクノロジー' },
-    { id: 'TSLA',  name: 'Tesla',            ticker: 'TSLA',  basePrice: 38900,  sector: '自動車・EV' },
-    { id: 'META',  name: 'Meta(Facebook)',    ticker: 'META',  basePrice: 72300,  sector: 'SNS・VR' },
     { id: 'NVDA',  name: 'NVIDIA',           ticker: 'NVDA',  basePrice: 18400,  sector: '半導体' },
+    { id: 'AMD',   name: 'Advanced Micro Devices', ticker: 'AMD', basePrice: 12400, sector: '半導体' },
+    // 米国EC・クラウド（2社）
+    { id: 'AMZN',  name: 'Amazon',           ticker: 'AMZN',  basePrice: 27200,  sector: 'EC・クラウド' },
+    { id: 'SHOP',  name: 'Shopify',          ticker: 'SHOP',  basePrice: 15800,  sector: 'EC・クラウド' },
+    // 米国SNS・エンタメ（2社）
+    { id: 'META',  name: 'Meta(Facebook)',    ticker: 'META',  basePrice: 72300,  sector: 'SNS・VR' },
+    { id: 'DIS',   name: 'Disney',            ticker: 'DIS',   basePrice: 18900,  sector: 'エンタメ' },
+    // 米国自動車・EV（3社）
+    { id: 'TSLA',  name: 'Tesla',            ticker: 'TSLA',  basePrice: 38900,  sector: '自動車・EV' },
+    { id: 'GM',    name: 'General Motors',    ticker: 'GM',    basePrice: 5200,   sector: '自動車' },
+    { id: 'F',     name: 'Ford',              ticker: 'F',     basePrice: 3800,   sector: '自動車' },
+    // 米国金融（2社）
+    { id: 'JPM',   name: 'JPモルガン・チェース', ticker: 'JPM',   basePrice: 23400,  sector: '金融' },
+    { id: 'BAC',   name: 'Bank of America',   ticker: 'BAC',   basePrice: 8900,   sector: '金融' },
+    // 米国医薬・ヘルスケア（2社）
+    { id: 'JNJ',   name: 'Johnson & Johnson', ticker: 'JNJ',   basePrice: 19200,  sector: '医薬・ヘルスケア' },
+    { id: 'PFE',   name: 'Pfizer',            ticker: 'PFE',   basePrice: 6800,   sector: '医薬・ヘルスケア' },
+    // 日本企業（12社）
     { id: 'TM',    name: 'トヨタ自動車',      ticker: 'TM',    basePrice: 2850,   sector: '自動車' },
     { id: 'SONY',  name: 'ソニーグループ',     ticker: 'SONY',  basePrice: 3320,   sector: 'エレクトロニクス' },
     { id: 'NTDOY', name: '任天堂',            ticker: 'NTDOY', basePrice: 8960,   sector: 'ゲーム' },
     { id: 'SBG',   name: 'ソフトバンクG',      ticker: 'SBG',   basePrice: 9200,   sector: '投資' },
     { id: 'KDDI',  name: 'KDDI',             ticker: 'KDDI',  basePrice: 4750,   sector: '通信' },
+    { id: '9984',  name: 'ソフトバンク',      ticker: '9984',  basePrice: 1680,   sector: '通信' },
+    { id: '8306',  name: '三菱UFJ',          ticker: '8306',  basePrice: 1850,   sector: '金融' },
+    { id: '8411',  name: 'みずほ',            ticker: '8411',  basePrice: 1520,   sector: '金融' },
+    { id: '8604',  name: '野村',              ticker: '8604',  basePrice: 2980,   sector: '金融' },
+    { id: '7203',  name: 'トヨタ自動車',      ticker: '7203',  basePrice: 2850,   sector: '自動車' },
+    { id: '6758',  name: 'ソニー',            ticker: '6758',  basePrice: 3320,   sector: 'エレクトロニクス' },
+    { id: '4063',  name: 'シェアリングテクノロジー', ticker: '4063', basePrice: 1200, sector: 'テクノロジー' },
 ];
 
 /* ─── 管理者UID ─── */
@@ -1833,10 +1885,26 @@ function tickPrices() {
 }
  
 /* ─── マーケットフィルター ─── */
+let marketSearchQuery = '';
+
 window.filterMarket = function(filter) {
     marketFilter = filter;
     document.querySelectorAll('.market-sub-tab').forEach(b => b.classList.remove('active'));
     document.querySelector(`.market-sub-tab[data-filter="${filter}"]`).classList.add('active');
+    renderMarket();
+};
+
+window.filterMarketBySearch = function() {
+    const searchInput = document.getElementById('market-search');
+    marketSearchQuery = searchInput.value.toLowerCase().trim();
+    document.getElementById('search-clear').style.display = marketSearchQuery ? 'block' : 'none';
+    renderMarket();
+};
+
+window.clearMarketSearch = function() {
+    document.getElementById('market-search').value = '';
+    marketSearchQuery = '';
+    document.getElementById('search-clear').style.display = 'none';
     renderMarket();
 };
  
@@ -1853,10 +1921,20 @@ function renderMarket() {
     grid.innerHTML = '';
     updateMarketCounts();
  
-    const filtered = marketFilter === 'real'
+    let filtered = marketFilter === 'real'
         ? allStocks.filter(s => !s.isUserCompany)
         : allStocks.filter(s => s.isUserCompany);
  
+    
+    // 検索クエリを適用
+    if (marketSearchQuery) {
+        filtered = filtered.filter(s => {
+            const searchStr = marketSearchQuery;
+            return s.name.toLowerCase().includes(searchStr) ||
+                   s.ticker.toLowerCase().includes(searchStr) ||
+                   (s.sector && s.sector.toLowerCase().includes(searchStr));
+        });
+    }
     if (filtered.length === 0) {
         grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#6b7280;padding:48px 0;font-size:14px;">
             ${marketFilter === 'user' ? 'まだ作成された株式はありません。「会社設立」タブから会社を作れます。' : '株式データがありません'}
