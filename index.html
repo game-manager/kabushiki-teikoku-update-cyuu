@@ -1453,7 +1453,7 @@ const COMPANY_CULTURES = {
 const COMPANY_ACTIONS = {
     product: {
         title: '新商品を発表',
-        cost: 150000,
+        cost: 1500000,
         desc: '技術力で勝負。成功すれば市場が一気にざわつく。',
         getRate: s => 40 + s.technology * 2 + s.morale + s.brand * 0.5,
         successMultiplier: 1.15,
@@ -1465,7 +1465,7 @@ const COMPANY_ACTIONS = {
     },
     ads: {
         title: '広告キャンペーン',
-        cost: 80000,
+        cost: 800000,
         desc: '知名度を取りにいく。短期の注目を作りやすい。',
         getRate: s => 55 + s.brand * 2 + s.attention,
         successMultiplier: 1.09,
@@ -1477,7 +1477,7 @@ const COMPANY_ACTIONS = {
     },
     quality: {
         title: '品質改革',
-        cost: 90000,
+        cost: 900000,
         desc: '派手さはないが、悪材料に強い会社へ育てる。',
         getRate: s => 70 + s.trust,
         successMultiplier: 1.03,
@@ -1489,7 +1489,7 @@ const COMPANY_ACTIONS = {
     },
     costcut: {
         title: 'コスト削減',
-        cost: 50000,
+        cost: 500000,
         desc: '財務は改善するが、やりすぎると社内の熱が冷める。',
         getRate: s => 75 + s.finance,
         successMultiplier: 1.04,
@@ -1513,7 +1513,7 @@ const COMPANY_ACTIONS = {
     },
     secret: {
         title: '大型プロジェクト開始',
-        cost: 300000,
+        cost: 3000000,
         desc: '数分後に成否判定。成功すれば自社の看板イベントになる。',
         project: true,
         getRate: s => 35 + s.technology * 2 + s.morale * 1.5 + s.finance,
@@ -2248,7 +2248,7 @@ window.hostileTakeover = async function(targetId) {
         return;
     }
     const targetPrice = stockPrices[targetId] || targetStock.basePrice;
-    const cost = Math.max(500000, targetPrice * 80);
+    const cost = Math.max(5000000, targetPrice * 800);
     if (balance < cost) {
         showToast(`買収資金が不足しています（必要: ${formatYen(cost)}）`, 'error');
         return;
@@ -3117,7 +3117,7 @@ function updateCompanyStatus() {
     const targets = allStocks.filter(s => s.isUserCompany && s.ownerUid !== currentUser.uid && s.ownerUid !== 'admin');
     const takeoverHtml = targets.length ? targets.map(s => {
         const targetPrice = stockPrices[s.id] || s.basePrice;
-        const cost = Math.max(500000, targetPrice * 80);
+        const cost = Math.max(5000000, targetPrice * 800);
         return `
             <div class="takeover-row">
                 <div>
