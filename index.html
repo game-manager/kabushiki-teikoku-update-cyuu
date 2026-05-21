@@ -1454,8 +1454,8 @@ let allStocks      = [...FAMOUS_STOCKS];
 let marketFilter   = 'real';
 let lastBonusDate  = null;
 let lastTaxDate    = null; // 最後に税金を支払った日時
-const TAX_INTERVAL = 30 * 60 * 1000; // 30分 (ミリ秒)
-const TAX_RATE     = 0.10; // 税率 10% (総資産に対して)
+const TAX_INTERVAL = 24 * 60 * 60 * 1000; // 24時間 (ミリ秒)
+const TAX_RATE     = 0.20; // 税率 20% (総資産に対して)
 let allPlayers     = {};
 let currentUsername = '';
 let allCompanies   = [];
@@ -1868,7 +1868,7 @@ function checkAndApplyTax() {
             updateBalanceDisplay();
             saveUserData();
             
-            showToast(`【納税】総資産の10%（${formatYen(taxAmount)}）が税金として徴収されました。`, 'warning');
+            showToast(`【納税】総資産の20%（${formatYen(taxAmount)}）が所得税として徴収されました。`, 'warning');
         } else {
             lastTaxDate = now;
             saveUserData();
@@ -3120,9 +3120,9 @@ function tickPrices() {
         newPrice = Math.max(newPrice, 1);
         newPrice = Math.round(newPrice);
         
-        // 1,000円〜100万円の範囲内に制限
+        // 1,000円〜200万円の範囲内に制限
         const minPrice = 1000;
-        const maxPrice = 1000000;
+        const maxPrice = 2000000;
         newPrice = Math.min(Math.max(newPrice, minPrice), maxPrice);
 
         stockPrices[s.id] = newPrice;
@@ -3304,9 +3304,9 @@ function calculateNextMarketState(state, now) {
         const eventImpact = (multiplier - 1.0 + stabilityGuard) * 0.1;
         let newPrice = Math.max(1, Math.round(prev * (1 + baseDrift + eventImpact + statDrift)));
         
-        // 1,000円〜100万円の範囲内に制限
+        // 1,000円〜200万円の範囲内に制限
         const minPrice = 1000;
-        const maxPrice = 1000000;
+        const maxPrice = 2000000;
         newPrice = Math.min(Math.max(newPrice, minPrice), maxPrice);
 
         prices[s.id] = newPrice;
