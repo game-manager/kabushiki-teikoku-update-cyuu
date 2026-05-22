@@ -7,6 +7,194 @@
     <title>株式帝国 - 株式投資シミュレーションゲーム</title>
     <link rel="icon" href="favicon.png" type="image/png">
     <style>
+        /* ─── アップグレード: テーマ変数定義 ─── */
+        :root {
+            --bg-main: #0a0e17;
+            --bg-card: #111827;
+            --bg-input: #0f172a;
+            --text-main: #e0e8f0;
+            --text-sub: #94a3b8;
+            --accent: #60a5fa;
+            --accent-hover: #3b82f6;
+            --positive: #34d399;
+            --negative: #f87171;
+            --border: #1e293b;
+            --radius: 12px;
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="cute"] {
+            --bg-main: #fff5f7;
+            --bg-card: #ffffff;
+            --bg-input: #fff0f3;
+            --text-main: #5d4037;
+            --text-sub: #a1887f;
+            --accent: #ff8fa3;
+            --accent-hover: #ffb3c1;
+            --positive: #81c784;
+            --negative: #f06292;
+            --border: #ffe0e5;
+            --radius: 20px;
+            --shadow: 0 4px 12px rgba(255, 143, 163, 0.15);
+        }
+
+        [data-theme="cool"] {
+            --bg-main: #0f0c29;
+            --bg-card: #1b1b3a;
+            --bg-input: #24244e;
+            --text-main: #e0e0ff;
+            --text-sub: #a0a0d0;
+            --accent: #a18cd1;
+            --accent-hover: #bc99ff;
+            --positive: #00d2ff;
+            --negative: #ff512f;
+            --border: #302b63;
+            --radius: 8px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* ─── 基本スタイルの上書き ─── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            min-height: 100vh;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        /* ─── UI要素の改善 ─── */
+        .login-box, .stock-card, .summary-card, .company-form, .company-stat-card, .company-action-card, .holdings-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .stock-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        input, select {
+            background: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) / 2);
+            padding: 10px 14px;
+            transition: var(--transition);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+        }
+
+        .auth-btn, .buy-btn, .sell-btn, .tab-btn, .admin-page-btn, .logout-btn {
+            border-radius: calc(var(--radius) / 2);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .auth-btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: #fff;
+            border: none;
+            font-weight: bold;
+        }
+
+        .auth-btn:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+        }
+
+        /* ─── ポジティブ・ネガティブ色の統一 ─── */
+        .stock-change.up, .pnl-positive, .badge-own { color: var(--positive); }
+        .stock-change.down, .pnl-negative { color: var(--negative); }
+        .buy-btn { background: rgba(52, 211, 153, 0.1); color: var(--positive); border: 1px solid var(--positive); }
+        .sell-btn { background: rgba(248, 113, 113, 0.1); color: var(--negative); border: 1px solid var(--negative); }
+        
+        .buy-btn:hover { background: var(--positive); color: #fff; }
+        .sell-btn:hover { background: var(--negative); color: #fff; }
+
+        /* ─── テーマ切替UI ─── */
+        .theme-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-input);
+            padding: 4px 8px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+        .theme-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: var(--transition);
+        }
+        .theme-dot.active { border-color: var(--text-main); transform: scale(1.2); }
+        .theme-dot.default { background: #60a5fa; }
+        .theme-dot.cute { background: #ff8fa3; }
+        .theme-dot.cool { background: #a18cd1; }
+
+        /* ─── プロフィール装飾 ─── */
+        .user-profile-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 12px;
+            background: var(--bg-input);
+            border-radius: 30px;
+            border: 1px solid var(--border);
+        }
+        .user-avatar {
+            font-size: 20px;
+            background: var(--bg-card);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        .user-rank {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ─── アニメーション ─── */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stock-card { animation: fadeIn 0.4s ease forwards; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* レスポンシブ調整 */
+        @media (max-width: 600px) {
+            .header { padding: 8px 12px; flex-direction: column; gap: 8px; }
+            .header-right { width: 100%; justify-content: space-between; }
+            .user-profile-badge { padding: 2px 8px; }
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             background: #0a0e17;
@@ -4218,6 +4406,109 @@ function checkAndStartTutorial() {
 window.startTutorial = startTutorial;
 window.skipTutorial = skipTutorial;
 window.nextTutorialStep = nextTutorialStep;
+
+/* ─── アップグレード: UI管理モジュール ─── */
+
+/**
+ * テーマ管理
+ */
+const ThemeManager = {
+    current: 'default',
+    init() {
+        const saved = localStorage.getItem('selected-theme');
+        if (saved) this.setTheme(saved);
+        this.renderSelector();
+    },
+    setTheme(name) {
+        this.current = name;
+        document.documentElement.setAttribute('data-theme', name);
+        localStorage.setItem('selected-theme', name);
+        this.updateSelector();
+    },
+    renderSelector() {
+        const container = document.querySelector('.header-right');
+        if (!container) return;
+
+        const selector = document.createElement('div');
+        selector.className = 'theme-selector';
+        selector.setAttribute('role', 'radiogroup');
+        selector.setAttribute('aria-label', 'テーマ切り替え');
+
+        ['default', 'cute', 'cool'].forEach(t => {
+            const dot = document.createElement('div');
+            dot.className = `theme-dot ${t} ${this.current === t ? 'active' : ''}`;
+            dot.setAttribute('role', 'radio');
+            dot.setAttribute('aria-checked', this.current === t);
+            dot.setAttribute('aria-label', `${t}テーマ`);
+            dot.setAttribute('tabindex', '0');
+            dot.onclick = () => this.setTheme(t);
+            dot.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') this.setTheme(t); };
+            selector.appendChild(dot);
+        });
+
+        // 既存の要素の前に追加
+        container.insertBefore(selector, container.firstChild);
+    },
+    updateSelector() {
+        document.querySelectorAll('.theme-dot').forEach(dot => {
+            const t = dot.classList.contains('default') ? 'default' : 
+                      dot.classList.contains('cute') ? 'cute' : 'cool';
+            dot.classList.toggle('active', this.current === t);
+            dot.setAttribute('aria-checked', this.current === t);
+        });
+    }
+};
+
+/**
+ * プロフィール・称号管理
+ */
+const ProfileManager = {
+    getRanks(assets) {
+        if (assets >= 200000000) return { title: '株式クイーン', icon: '👑' };
+        if (assets >= 50000000) return { title: '成長ハンター', icon: '🏹' };
+        if (assets >= 10000000) return { title: '注目トレーダー', icon: '✨' };
+        return { title: '投資ビギナー', icon: '🌱' };
+    },
+    update() {
+        const totalAssets = typeof balance !== 'undefined' ? (balance + this.getStockValue()) : 0;
+        const rank = this.getRanks(totalAssets);
+        const container = document.querySelector('.header-left');
+        if (!container) return;
+
+        let badge = document.querySelector('.user-profile-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'user-profile-badge';
+            container.appendChild(badge);
+        }
+
+        badge.innerHTML = `
+            <div class="user-avatar" title="現在の称号: ${rank.title}">${rank.icon}</div>
+            <div class="user-rank">${rank.title}</div>
+        `;
+    },
+    getStockValue() {
+        if (typeof holdings === 'undefined' || typeof stockPrices === 'undefined') return 0;
+        return Object.entries(holdings).reduce((sum, [id, h]) => {
+            const price = stockPrices[id] || 0;
+            return sum + (price * h.qty);
+        }, 0);
+    }
+};
+
+// 既存の初期化処理にフック
+function initUpgrade() {
+    ThemeManager.init();
+    ProfileManager.update();
+    
+    // 資産が変わるタイミングでプロフィール更新（簡易的に定期実行）
+    setInterval(() => ProfileManager.update(), 5000);
+}
+
+// 既存の window.onload または適切な初期化場所で実行するように調整が必要
+// index.htmlの最後に追記する形をとる
+
+initUpgrade();
 </script>
 </body>
 </html>
