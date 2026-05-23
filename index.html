@@ -2541,7 +2541,7 @@ window.performCompanyAction = async function(actionId) {
             duration: 30000
         });
         updateBalanceDisplay();
-        updateCompanyStatus();
+        await updateCompanyStatus();
         showToast('大型プロジェクトを開始しました', 'success');
         return;
     }
@@ -2570,7 +2570,7 @@ window.performCompanyAction = async function(actionId) {
         duration: 45000
     });
     updateBalanceDisplay();
-    updateCompanyStatus();
+    await updateCompanyStatus();
     showToast(success ? '社長アクション成功！' : '社長アクション失敗...', success ? 'success' : 'error');
 };
 
@@ -2600,7 +2600,7 @@ window.resolveCompanyProject = async function() {
         multiplier: success ? 1.25 : 0.82,
         duration: 60000
     });
-    updateCompanyStatus();
+    await updateCompanyStatus();
     showToast(success ? '大型プロジェクト大成功！' : '大型プロジェクト失敗', success ? 'success' : 'error');
 };
 
@@ -2610,7 +2610,7 @@ window.changeCompanyCulture = async function(culture) {
     userCompany.companyStats.culture = culture;
     pushCompanyHistory(`社風を「${COMPANY_CULTURES[culture].label}」に変更しました`, 'info');
     await persistUserCompany();
-    updateCompanyStatus();
+    await updateCompanyStatus();
     showToast('社風を変更しました', 'success');
 };
 
@@ -2649,7 +2649,7 @@ window.hostileTakeover = async function(targetId) {
         
         await set(dbRef(db, `takeoverProposals/${proposalId}`), proposal);
         showToast(`${targetStock.name} への買収提案を送信しました。相手企業の承認を待っています。`, 'info');
-        updateCompanyStatus();
+        await updateCompanyStatus();
     } catch (e) {
         showToast('買収提案の送信に失敗しました: ' + e.message, 'error');
     }
@@ -2711,7 +2711,7 @@ window.sendCompanyFunds = async function(targetId, amount) {
     });
     updateBalanceDisplay();
     await initMarket();
-    updateCompanyStatus();
+    await updateCompanyStatus();
     showToast('資金支援を送りました', 'success');
 };
 
@@ -2760,7 +2760,7 @@ window.formBusinessAlliance = async function(targetId) {
     });
     updateBalanceDisplay();
     await initMarket();
-    updateCompanyStatus();
+    await updateCompanyStatus();
     showToast('業務提携を結びました', 'success');
 };
 
@@ -2859,16 +2859,16 @@ window.respondToTakeoverProposal = async function(proposalId, accept) {
             showToast(`${proposal.targetName} の買収提案を承認しました。`, 'success');
         } else {
             // 拒否の場合
-            await update(dbRef(db, `takeoverProposals/${proposalId}`), {
-                status: 'rejected',
-                respondedAt: Date.now()
-            });
-            showToast(`${proposal.proposerName} の買収提案を拒否しました。`, 'info');
-        }
-        
-        await initMarket();
-        updateCompanyStatus();
-    } catch (e) {
+        await update(dbRef(db, `takeoverProposals/${proposalId}`), {
+            status: 'rejected',
+            respondedAt: Date.now()
+        });
+        showToast(`${proposal.proposerName} の買収提案を拒否しました。`, 'info');
+    }
+    
+    await initMarket();
+    await updateCompanyStatus();
+} catch (e) {
         showToast('提案への対応に失敗しました: ' + e.message, 'error');
     }
 };
@@ -2926,7 +2926,7 @@ window.launchJointProject = async function(targetId) {
     });
     updateBalanceDisplay();
     await initMarket();
-    updateCompanyStatus();
+    await updateCompanyStatus();
     showToast(success ? '共同開発に成功しました' : '共同開発は失敗しました', success ? 'success' : 'error');
 };
 
@@ -2978,6 +2978,7 @@ window.createCompany = async function() {
         showToast('🎉 会社を設立し、上場しました！', 'success');
         await initMarket();
         updateBalanceDisplay();
+        await updateCompanyStatus();
     } catch (e) {
         showToast('設立に失敗しました: ' + e.message, 'error');
     }
@@ -3403,7 +3404,7 @@ async function loadPublicCompanies() {
         userCompany = normalizeCompany(userCompany);
         document.getElementById('company-form').style.display = 'none';
         document.getElementById('company-status').style.display = 'block';
-        updateCompanyStatus();
+        await updateCompanyStatus();
     } else {
         document.getElementById('company-form').style.display = '';
         document.getElementById('company-status').style.display = 'none';
@@ -3448,11 +3449,11 @@ function tickPrices() {
 function startSharedMarket() {
     stopSharedMarket();
 
-    marketStateUnsubscribe = onValue(dbRef(db, 'market/state'), (snapshot) => {
+    marketStateUnsubscribe = onValue(dbRef(db, 'market/state'), async (snapshot) => {
         const state = snapshot.val();
         if (!state) return;
         lastMarketUpdate = Date.now(); // 更新時刻を記録
-        applySharedMarketState(state);
+        await applySharedMarketState(state);
     }, (e) => {
         console.warn('Shared market listener failed:', e.message);
         showToast('共通株価の読み込みに失敗しました', 'error');
@@ -3689,7 +3690,7 @@ function createSharedMarketEvent(now) {
     };
 }
 
-function applySharedMarketState(state) {
+async function applySharedMarketState(state) {
     stockPrices = { ...(state.prices || {}) };
     priceHistory = { ...(state.history || {}) };
     allStocks.forEach(s => {
@@ -3721,10 +3722,10 @@ function applySharedMarketState(state) {
     renderMarket();
     updatePortfolio();
     if (selectedStockId) renderStockDetail(selectedStockId);
-    updateCompanyStatus();
+    await updateCompanyStatus();
 }
 
-function updateCompanyStatus() {
+async function updateCompanyStatus() {
     if (!userCompany) return;
     const companyInfo = document.getElementById('company-info');
     if (!companyInfo) return;
