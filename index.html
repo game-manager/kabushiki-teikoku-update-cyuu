@@ -1708,11 +1708,25 @@ let lastSharedEventId = null;
 
 const COMPANY_STAT_MAX = 20;
 const COMPANY_ACTION_COOLDOWN = 5 * 60 * 1000;
-const COMPANY_NAME_BLOCKLIST = [
+const NAME_BLOCKLIST = [
     '死ね', '殺す', '殺害', '爆破', 'テロ', '犯罪', '詐欺', '麻薬', '覚醒剤',
     'くそ', 'クソ', 'ばか', 'バカ', 'アホ', 'fuck', 'shit', 'bitch', 'asshole',
-    'sex', 'porn', 'nazi', 'hitler', 'admin', '管理者', '運営', '公式'
+    'sex', 'porn', 'nazi', 'hitler', 'admin', '管理者', '運営', '公式',
+    '大久保', 'おおくぼ', 'オオクボ', 'ookubo', 'okubo',
+    'まんこ', 'ちんこ', 'おまんこ', 'おちんこ', 'うんこ', 'クリトリス', 'フェラ', '本番', '援交', '売春', '非行', '乱交', '近親', '獣姦', 'スカトロ', 'バイブ', 'ローター', 'オナニー', '射精', '中出し', '潮吹き'
 ];
+
+function validateInputName(name) {
+    const normalized = String(name || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!normalized) return '名前を入力してください';
+    if (normalized.length > 20) return '20文字以内にしてください';
+    if (/https?:\/\//i.test(name) || /www\./i.test(name)) return 'URLを含む名前は使えません';
+    if (/[<>{}[\]\\]/.test(name)) return '記号 < > { } [ ] \\ は使えません';
+    if (NAME_BLOCKLIST.some(word => normalized.includes(word.toLowerCase()))) {
+        return '不適切または禁止されている言葉が含まれています';
+    }
+    return '';
+}
 
 const COMPANY_CULTURES = {
     challenger: { label: '勝負師', desc: '大成功も大失敗も起こりやすい' },
@@ -1881,8 +1895,10 @@ window.handleAuth = async function() {
  
     if (!email || !pass) { errEl.textContent = 'メールとパスワードを入力してください'; return; }
     if (pass.length < 6) { errEl.textContent = 'パスワードは6文字以上です'; return; }
-    if (!isLoginMode && !username) { errEl.textContent = 'ユーザー名を入力してください'; return; }
-    if (!isLoginMode && username.length > 20) { errEl.textContent = 'ユーザー名は20文字以内にしてください'; return; }
+    if (!isLoginMode) {
+        const nameError = validateInputName(username);
+        if (nameError) { errEl.textContent = 'ユーザー名: ' + nameError; return; }
+    }
  
     try {
         if (isLoginMode) {
@@ -2133,14 +2149,9 @@ window.updateUsername = async function() {
     const msgEl = document.getElementById('settings-username-msg');
     msgEl.textContent = '';
     
-    if (!newUsername) {
-        msgEl.textContent = '❌ ユーザー名を入力してください';
-        msgEl.style.color = '#f87171';
-        return;
-    }
-    
-    if (newUsername.length > 20) {
-        msgEl.textContent = '❌ ユーザー名は20文字以内です';
+    const nameError = validateInputName(newUsername);
+    if (nameError) {
+        msgEl.textContent = '❌ ' + nameError;
         msgEl.style.color = '#f87171';
         return;
     }
@@ -2397,13 +2408,10 @@ function formatYen(value) {
 }
 
 function validateCompanyName(name) {
+    const nameError = validateInputName(name);
+    if (nameError) return nameError;
+
     const normalized = String(name || '').trim().toLowerCase().replace(/\s+/g, '');
-    if (!normalized || normalized.length > 20) return '有効な会社名を入力してください';
-    if (/https?:\/\//i.test(name) || /www\./i.test(name)) return 'URLを含む会社名は使えません';
-    if (/[<>{}[\]\\]/.test(name)) return '記号 < > { } [ ] \\ は会社名に使えません';
-    if (COMPANY_NAME_BLOCKLIST.some(word => normalized.includes(word.toLowerCase()))) {
-        return '不適切または紛らわしい会社名は使えません';
-    }
     const existing = allStocks.some(s => s.name && s.name.toLowerCase().replace(/\s+/g, '') === normalized);
     if (existing) return '同じ名前の会社が既にあります';
     return '';
