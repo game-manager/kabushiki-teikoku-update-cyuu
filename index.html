@@ -2104,6 +2104,7 @@ onAuthStateChanged(auth, async (user) => {
         }
         checkLoginBonus();
         await initMarket();
+        // initMarket完了後にstartSharedMarketを開始（allStocksが正しく初期化された状態で開始）
         startSharedMarket();
         checkAndStartTutorial();
     } else {
@@ -3574,9 +3575,14 @@ function startSharedMarket() {
         showToast('共通株価の読み込みに失敗しました', 'error');
     });
 
+    // 即座にリーダー選出を試みて、初期株価更新を促進
     maintainMarketLeadership();
-    // 2秒から1.5秒に短縮し、リーダーの空白期間を減らす
+    // 1.5秒間隔でリーダー選出を試みる
     marketLeaderInterval = setInterval(maintainMarketLeadership, 1500);
+    // さらに、500ms後に再度リーダー選出を試みて、初期更新を加速
+    setTimeout(() => {
+        if (!isMarketLeader) maintainMarketLeadership();
+    }, 500);
 }
 
 function stopSharedMarket() {
@@ -3871,7 +3877,8 @@ async function applySharedMarketState(state) {
     stockPrices = { ...(state.prices || {}) };
     priceHistory = { ...(state.history || {}) };
     allStocks.forEach(s => {
-        if (!stockPrices[s.id]) stockPrices[s.id] = s.basePrice;
+        const basePrice = s.basePrice || s.initialPrice || 1000;
+        if (!stockPrices[s.id]) stockPrices[s.id] = basePrice;
         if (!Array.isArray(priceHistory[s.id]) || priceHistory[s.id].length === 0) {
             priceHistory[s.id] = [stockPrices[s.id]];
         }
@@ -4237,7 +4244,8 @@ function renderMarket() {
     }
  
     filtered.forEach(s => {
-        const price = stockPrices[s.id] || s.basePrice;
+        const basePrice = s.basePrice || s.initialPrice || 1000;
+        const price = stockPrices[s.id] || basePrice;
         const hist  = priceHistory[s.id] || [price];
         const prev  = hist.length >= 2 ? hist[hist.length - 2] : price;
         const change = price - prev;
