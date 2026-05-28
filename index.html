@@ -4537,6 +4537,10 @@ function renderMarket() {
             isNew = true;
         }
 
+        const existingQtyInput = card.querySelector('.inline-qty-input');
+        const existingQtyValue = existingQtyInput ? existingQtyInput.value : '1';
+        const wasQtyFocused = document.activeElement === existingQtyInput;
+
         const contentHtml = `
             <div class="stock-top">
                 <div>
@@ -4555,7 +4559,7 @@ function renderMarket() {
             <div class="mini-chart">${buildMiniChart(hist)}</div>
             <div class="stock-actions">
                 <button class="buy-btn" data-id="${s.id}">買う</button>
-                <input type="number" class="inline-qty-input" data-id="${s.id}" value="${card.querySelector('.inline-qty-input')?.value || 1}" min="1" placeholder="数量">
+                <input type="number" class="inline-qty-input" data-id="${s.id}" value="${existingQtyValue}" min="1" placeholder="数量">
                 <button class="sell-btn" data-id="${s.id}">売る</button>
             </div>
         `;
@@ -4574,6 +4578,12 @@ function renderMarket() {
 
             const qtyInput = card.querySelector('.inline-qty-input');
             qtyInput.addEventListener('click', (e) => e.stopPropagation());
+            qtyInput.addEventListener('input', (e) => e.stopPropagation());
+            if (wasQtyFocused) {
+                qtyInput.focus();
+                const pos = qtyInput.value.length;
+                qtyInput.setSelectionRange(pos, pos);
+            }
 
             card.querySelector('.buy-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
